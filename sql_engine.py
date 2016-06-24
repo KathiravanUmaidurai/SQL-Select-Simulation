@@ -35,8 +35,8 @@ class SQL_Engine(object):
             Execute the given query and provide the result of it
         '''
         self.query = query
-        self.query_analyze()
         try:
+            self.query_analyze()
             self.check_and_load_data()
         except Exception,e:
             print e
@@ -56,14 +56,13 @@ class SQL_Engine(object):
             where conditions
         '''
         if self.query:
-            self.table = utils.get_table_name(self.query)
             try:
+                self.table = utils.get_table_name(self.query)
                 self.result_header = utils.get_result_header(self.query)
                 aggregation_tuple = utils.get_aggregation(self.result_header)
                 self.aggregation = aggregation_tuple
                 self.condition_sql_str = utils.get_condition(self.query)
             except Exception,e:
-                print e
                 raise ValueError('Query string entered is not a valid to process... Please Check it !!!! ')
         
     def check_and_load_data(self):
@@ -73,14 +72,12 @@ class SQL_Engine(object):
         try:
             self.table_path,self.data_type = meta.SQL_MetaData[self.table]
         except Exception,e:
-            print e
             raise ValueError( 'Table Error... Table is not available in the SQL MetaData !!!! ')
         try:
             self.file_obj = open(self.table_path,'r')
             self.headers = self.file_obj.readline().replace('\n','').split(',')
             self.table_data = utils.load_data_into_dict(self.file_obj,self.headers,self.data_type)
         except Exception,e:
-            print e
             raise ValueError('Dataset error ... Check the file path, values and data type of the values !!!! ')
         finally:
             self.file_obj.close()
@@ -91,7 +88,6 @@ class SQL_Engine(object):
         try:
             self.selected_columns = utils.get_selected_columns(self.result_header,self.headers,self.aggregation)
         except Exception,e:
-            print e
             raise ValueError("Query Error : Check the column names given in the select query")
         
     def get_condition_py_string(self):
@@ -115,7 +111,6 @@ class SQL_Engine(object):
                 if not self.condition_py_str or eval(self.condition_py_str):
                     self.result_data.append(each_data)
         except Exception,e:
-            print e
             raise ValueError('Query Error : Check the where condition in the query')
 
     def aggregation_functions(self):

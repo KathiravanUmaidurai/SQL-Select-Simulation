@@ -48,6 +48,8 @@ def get_selected_columns(result_header,headers,aggregation):
     return selected_columns
 
 def load_data_into_dict(file_obj,headers,datatype):
+    '''
+    '''
     table_data=[]
     schema = zip(headers,datatype)
     lines = file_obj.readlines()
