@@ -1,0 +1,5 @@
+title,brand,store,price,in_stock
+str,int,int,float,bool
+Apple iPhone 5,2,2,599.99,true
+Nokia Lumia 800,3,2,300,false
+Samsung LED TV 51 inches,4,2,900,true

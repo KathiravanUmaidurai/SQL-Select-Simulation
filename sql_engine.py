@@ -4,17 +4,19 @@
 '''
 
 import sys
+import os
 import re
 import __builtin__
 
 from utils import utils
 from meta import meta
 
-class SQL_Engine(object):
+BASE_PATH = os.getcwd()
     
+class SQL_Engine(object):
     def __init__(self):
         '''
-            Along with vaiable initialaization check table availability  and load the data
+            Query,File and result related informations are initializing.
         '''
         self.table = None
         self.query = None
@@ -32,7 +34,9 @@ class SQL_Engine(object):
             
     def execute(self,query):
         '''
-            Execute the given query and provide the result of it
+            Execute the given query and provide the result of it in sucess case
+            Return "---NO DATA ---" in case of empty set
+            In case of exception raise a error message
         '''
         self.query = query
         try:
@@ -42,8 +46,11 @@ class SQL_Engine(object):
             print e
             self.exit_retry_sql()
         self.get_select_column_list()
-        self.get_condition_py_string()
-        self.get_result()
+        try:
+            self.get_condition_py_string()
+            self.get_result()
+        except Exception,e:
+            raise ValueError('Query Error : Check the where condition in the query')            
         if self.result_data and self.aggregation:
             self.aggregation_functions()
         self.format_result_str()
@@ -63,32 +70,36 @@ class SQL_Engine(object):
                 self.aggregation = aggregation_tuple
                 self.condition_sql_str = utils.get_condition(self.query)
             except Exception,e:
-                raise ValueError('Query string entered is not a valid to process... Please Check it !!!! ')
+                raise ValueError('Query Error : Query string entered is not a valid to process... Please Check it !!!! ')
         
     def check_and_load_data(self):
         '''
-            Load the headers and correspoding data of the given table
+            Check the Dataset Availability in the dataset path and Load the data into dict
+            with coreespoding data type converion
         '''
         try:
-            self.table_path,self.data_type = meta.SQL_MetaData[self.table]
+            self.table_path = utils.check_dataset(BASE_PATH,self.table)
         except Exception,e:
-            raise ValueError( 'Table Error... Table is not available in the SQL MetaData !!!! ')
+            raise ValueError( 'Table Error : DataSet or DataType Not Available !!!! ')
         try:
             self.file_obj = open(self.table_path,'r')
             self.headers = self.file_obj.readline().replace('\n','').split(',')
+            self.data_type = self.file_obj.readline().replace('\n','').split(',')
             self.table_data = utils.load_data_into_dict(self.file_obj,self.headers,self.data_type)
         except Exception,e:
-            raise ValueError('Dataset error ... Check the file path, values and data type of the values !!!! ')
+            raise ValueError('Dataset Error : Check the file path, values and data type of the values !!!! ')
         finally:
             self.file_obj.close()
 
     def get_select_column_list(self):
         '''
+            Get selected column in the giver SQL query
+            This is case insensitive check. To have the flexibility in query typing.
         '''
         try:
             self.selected_columns = utils.get_selected_columns(self.result_header,self.headers,self.aggregation)
         except Exception,e:
-            raise ValueError("Query Error : Check the column names given in the select query")
+            raise ValueError("Query Error : Check the column names or aggregation given in the select query")
         
     def get_condition_py_string(self):
         '''
@@ -98,20 +109,17 @@ class SQL_Engine(object):
             self.condition_py_str = self.condition_sql_str
             for each_header in self.headers:
                 self.condition_py_str = self.condition_py_str.replace(each_header,"each_data['%s']"%each_header)
-            for each_operator in meta.Operation_Metadata:
+            for each_operator in meta.OPERATION_METADATA:
                 pattern = re.compile(each_operator, re.IGNORECASE)
-                self.condition_py_str = pattern.sub(meta.Operation_Metadata[each_operator],self.condition_py_str)
+                self.condition_py_str = pattern.sub(meta.OPERATION_METADATA[each_operator],self.condition_py_str)
             
     def get_result(self):
         '''
-            Getting the result row based on the where condition on  the given query
+            Getting the result row based on the where condition on the given query
         '''
-        try:
-            for each_data in self.table_data:
-                if not self.condition_py_str or eval(self.condition_py_str):
-                    self.result_data.append(each_data)
-        except Exception,e:
-            raise ValueError('Query Error : Check the where condition in the query')
+        for each_data in self.table_data:
+            if not self.condition_py_str or eval(self.condition_py_str):
+                self.result_data.append(each_data)
 
     def aggregation_functions(self):
         '''
@@ -120,7 +128,7 @@ class SQL_Engine(object):
         '''
         column_select = self.selected_columns[0]
         filter_result = [ each_result[column_select] for each_result in self.result_data]
-        filter_result = getattr(__builtin__,meta.Aggregation_Py_Functions[self.aggregation])(filter_result)
+        filter_result = getattr(__builtin__,meta.AGGREGATION_PY_METADATA[self.aggregation])(filter_result)
         if not hasattr(filter_result,'__iter__'):
             self.result_data = [{column_select:filter_result}]
         else:
@@ -128,7 +136,7 @@ class SQL_Engine(object):
 
     def format_result_str(self):
         '''
-            Formatting the result data to display properly
+            Formatting the result data to display properly as output
         '''
         header_str = self.result_header if self.aggregation else ','.join(self.selected_columns)
         result_str = ''
@@ -137,7 +145,7 @@ class SQL_Engine(object):
                 result_str += ','.join([str(each_result[header]) for header in  self.selected_columns if header in each_result])+'\n'
             result_str = '\n'+header_str+'\n'+result_str
         else:
-            result_str = '----- No Data -----'
+            result_str = '\n'+header_str+'\n-------------- NO RESULTS FOUND -------------'
         print result_str
         
     def clear_data(self):
@@ -160,7 +168,7 @@ class SQL_Engine(object):
         
     def exit_retry_sql(self):
         '''
-            Getting user option to close the engine or retry with other table since the current table is having as issue
+            Getting user option to close the engine or retry with other table since the current table is having as issue.
         '''
         exit_choice = ''
         while exit_choice.lower() not in ['yes','no','y','n','exit','retry']:

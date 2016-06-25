@@ -1,5 +1,5 @@
 '''
-                    Basic PY file to run the SQL Engine
+                    Basic PY file to start the SQL Engine
 
 '''
 
@@ -11,18 +11,22 @@ def start_engine():
         At any case user provide exit as input will terminate the engine
     '''
     
-    print "--------------------------------- SQL ENGINE IN PYTHON ----------------------------------------"
-    print "\n\n\t\t\tEnter EXIT any time to terminate the engine\n\n"
+    print "--------------------------------- SQL SELECT ENGINE IN PYTHON ----------------------------------------"
+    print '\n\n\t\t\tEnter ""EXIT"" any time to terminate the engine\n\n'
     conn = SQL_Engine()
-    query = raw_input("Enter Select Query : ")
+    query = raw_input("\nEnter Select Query : ")
     while(query.lower().strip()!='exit'):
         try:
             conn.execute(query)
         except Exception,e:
             if conn.close:
                 return
+            elif conn.retry:
+                pass
+            else:
+                print e
         conn.clear_data()
-        query = raw_input("Enter Select Query : ")
+        query = raw_input("\nEnter Select Query : ")
     return
             
 if __name__ == '__main__':
